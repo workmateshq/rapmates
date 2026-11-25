@@ -71,6 +71,7 @@
 /* ---------- Write Bars: voting and the scoreboard ---------- */
 #vote-overlay.wb { overflow-y: auto; padding-bottom: 30px; }
 #vote-overlay.wb .card { max-width: 640px; }
+#vote-overlay.wb .kicker { display: none; } /* the title says it: "Rate Ada's bars" */
 .wb-vote-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; text-align: left; }
 .wb-entry { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; background: #111; }
 .wb-entry-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
