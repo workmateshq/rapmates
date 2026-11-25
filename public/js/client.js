@@ -296,6 +296,7 @@
   }
   // Sampled sound effects: the golf clap that marks the end of a round, and the "faaah" ad-lib.
   let clapBuffer = null;
+  let cheerBuffer = null; // the crowd cheer under the podium confetti
   const roundEndBuffers = {}; // 1..ROUND_ENDS -> AudioBuffer
   let endSounds = []; // the clap and voiceover still ringing after a turn (stopped when leaving the game)
   const ROUND_END_DELAY = 2.5; // seconds after the golf clap starts
@@ -313,6 +314,7 @@
     if (!a || clapLoading) return;
     clapLoading = true;
     loadSample(a, 'sfx/golf-clap.mp3').then((b) => { clapBuffer = b; }, (err) => { clapLoading = false; console.warn("Couldn't load the golf clap.", err); });
+    loadSample(a, 'sfx/cheer.mp3').then((b) => { cheerBuffer = b; }, (err) => console.warn("Couldn't load the cheer.", err));
     for (let n = 1; n <= Engine.ROUND_ENDS; n++) {
       loadSample(a, `sfx/round-end-0${n}.mp3`).then((b) => { roundEndBuffers[n] = b; }, (err) => console.warn(`Couldn't load round-end-0${n}.`, err));
     }
@@ -745,6 +747,22 @@
     showResults(over);
   });
 
+  // Write Bars lines: how wide the box is, in ems of the big "current" line, so every line wraps the same at
+  // any size (see .wb-line in writebars.css).
+  function fitWbLines() {
+    const box = $('wb-lines');
+    if (!box || !box.clientWidth) return;
+    const probe = document.createElement('div');
+    probe.className = 'wb-line current';
+    probe.style.cssText = 'position:absolute;visibility:hidden;width:auto';
+    probe.textContent = 'x';
+    box.append(probe);
+    const big = parseFloat(getComputedStyle(probe).fontSize) || 40;
+    probe.remove();
+    box.style.setProperty('--wrap', ((box.clientWidth - 8) / big).toFixed(3));
+  }
+  window.addEventListener('resize', fitWbLines);
+
   // ---------- Mic drop: a full-screen takeover with mics raining down ----------
   let micDropTimer = null;
   function showMicDrop() {
@@ -1159,7 +1177,7 @@
   // ---------- Write Bars: voting and the scoreboard ----------
 
   function showWbVote(p) {
-    const key = `${state.game.round}:wb${p.wbRound}`;
+    const key = `${state.game.round}:wb${p.wbRound}:${p.turnIndex}`;
     if (state.voteTurn !== key) {
       state.voteTurn = key;
       state.wbStars = {};
@@ -1171,7 +1189,8 @@
     $('vote-overlay').classList.add('wb');
     $('vote-stars-wrap').style.display = 'none';
     $('wb-vote').hidden = false;
-    $('vote-title').textContent = `Round ${p.wbRound}: who spat it best?`;
+    const perf = p.performances[0];
+    $('vote-title').textContent = perf ? (perf.id === state.playerId ? 'How did you go?' : `Rate ${perf.name}'s bars`) : 'Rate the bars';
     $('vote-title').style.color = '';
     $('wb-vote-list').replaceChildren(...p.performances.map((x) => {
       const mine = x.id === state.playerId;
@@ -1226,8 +1245,8 @@
   function renderWbVoteState() {
     const ids = state.wbRateable || [];
     const rated = ids.filter((id) => state.wbStars[id]).length;
-    let msg = `Rate every performance (${rated} of ${ids.length}), then submit.`;
-    if (!ids.length) msg = 'Nobody else to rate. Sit tight!';
+    let msg = ids.length > 1 ? `Rate every performance (${rated} of ${ids.length}), then submit.` : 'Tap the stars, then submit.';
+    if (!ids.length) msg = 'Your bars are being rated. Sit tight!';
     else if (state.voted) msg = 'Votes in! Waiting for everyone else...';
     $('vote-msg').textContent = msg;
     $('wb-vote-btn').style.display = ids.length ? 'block' : 'none';
@@ -1454,8 +1473,18 @@
     $('results-overlay').classList.add('show');
     if (winners.length) {
       confetti();
-      playSfx('win');
+      playCheer();
     }
+  }
+  // The crowd cheers while the confetti falls (stopped if you leave the game).
+  function playCheer() {
+    if (!ac || ac.state !== 'running' || !cheerBuffer) return;
+    const src = ac.createBufferSource();
+    src.buffer = cheerBuffer;
+    src.connect(sfxGain);
+    src.start();
+    src.endsAt = ac.currentTime + cheerBuffer.duration;
+    endSounds.push(src);
   }
 
   function confetti() {
@@ -1674,6 +1703,7 @@
       return el;
     });
     $('wb-lines').replaceChildren(...stage.lineEls);
+    fitWbLines();
     $('wb-beats').querySelectorAll('i').forEach((d) => d.classList.remove('lit', 'down'));
     hideMicDrop();
     stage.rapping = false;

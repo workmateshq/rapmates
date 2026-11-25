@@ -42,7 +42,7 @@
   const WB_BPM = 90; // only the 90 BPM tracks: room to say the lines
   const MIC_DROP_MS = 7000; // the mic-drop takeover after a rapper finishes, before the vote / next rapper
   const WB_GAP_MS = MIC_DROP_MS; // Write Bars: after a performance (golf clap and mic drop while the track fades)
-  const WB_VOTE_SECONDS = 30; // rating everyone at once takes a little longer
+  const WB_VOTE_SECONDS = 20; // rating each performance straight after it
   const STANDINGS_MS = 8000; // the final scoreboard, before the podium
   // The intro screen at the start of a game: the rules read out over a beat (sfx/intro-<mode>.mp3), a little
   // longer than the voiceover. The host can skip it.
@@ -541,6 +541,8 @@
       const wb = this.wb;
       wb.queue = this.order.filter((id) => this.members.has(id) && wb.entries.has(id));
       wb.perf = -1;
+      wb.roundStars = new Map(); // id -> { stars, votes } this round
+      wb.performers = [];
       this.beginPerformance(0);
     }
 
@@ -549,7 +551,7 @@
     beginPerformance(index) {
       const wb = this.wb;
       while (index < wb.queue.length && !this.members.has(wb.queue[index])) index++;
-      if (index >= wb.queue.length) return this.openRoundVote();
+      if (index >= wb.queue.length) return this.closeRound();
       wb.perf = index;
       const id = wb.queue[index];
       const entry = wb.entries.get(id);
@@ -568,17 +570,16 @@
       this.broadcast('phase', this.phasePayload());
     }
 
-    // After the round's last performance everyone rates every performance at once (not their own).
-    openRoundVote() {
+    // Straight after each performance (and its mic drop), everyone else rates it 1-5 stars.
+    openPerfVote() {
       const wb = this.wb;
-      wb.performers = wb.queue.filter((id) => this.members.has(id));
-      if (!wb.performers.length) return this.endGame();
-      this.phase = 'vote';
-      this.turn = null;
-      this.turnIndex = -1;
+      const id = this.turn && this.turn.rapperId;
+      if (!id || !this.members.has(id)) return this.beginPerformance(wb.perf + 1);
+      wb.performers = [id];
       wb.votes = new Map();
+      this.phase = 'vote';
       this.voteEndsAt = this.now() + WB_VOTE_SECONDS * 1000;
-      if (!this.writeBarsVoters().length) return this.closeRoundVote();
+      if (!this.writeBarsVoters().length) return this.closePerfVote();
       this.broadcast('phase', this.phasePayload());
     }
 
@@ -608,23 +609,41 @@
       });
       if (!Object.keys(ratings).length) return false;
       wb.votes.set(id, { ...(wb.votes.get(id) || {}), ...ratings });
-      if (this.writeBarsVoters().every((v) => this.hasRatedAll(v))) this.closeRoundVote();
+      if (this.writeBarsVoters().every((v) => this.hasRatedAll(v))) this.closePerfVote();
       else this.broadcast('votes', this.serializeVotes());
       return true;
     }
 
-    // Stars received this round go on each rapper's running total; then the scoreboard.
-    closeRoundVote() {
+    // The performance's stars go on the rapper's running total, then the next rapper is up.
+    closePerfVote() {
       const wb = this.wb;
-      const ballots = [...wb.votes.values()];
-      wb.roundResults = wb.performers.filter((id) => this.members.has(id)).map((id) => {
-        const m = this.members.get(id);
-        const got = ballots.map((b) => b[id]).filter(Boolean);
+      const id = wb.performers[0];
+      const m = id && this.members.get(id);
+      if (m) {
+        const got = [...wb.votes.values()].map((b) => b[id]).filter(Boolean);
         const stars = got.reduce((a, b) => a + b, 0);
+        const prev = wb.roundStars.get(id) || { stars: 0, votes: 0 };
+        wb.roundStars.set(id, { stars: prev.stars + stars, votes: prev.votes + got.length });
         const total = (wb.totals.has(id) ? wb.totals.get(id).total : 0) + stars;
         wb.totals.set(id, { id, name: m.name, number: m.number, color: m.color, total });
-        return { id, name: m.name, number: m.number, color: m.color, stars, votes: got.length, total };
+      }
+      wb.performers = [];
+      this.beginPerformance(wb.perf + 1);
+    }
+
+    // After the round's last performance (and its vote): the scoreboard.
+    closeRound() {
+      const wb = this.wb;
+      this.turn = null;
+      this.turnIndex = -1;
+      wb.roundResults = wb.queue.filter((id) => this.members.has(id)).map((id) => {
+        const m = this.members.get(id);
+        const got = wb.roundStars.get(id) || { stars: 0, votes: 0 };
+        const total = wb.totals.has(id) ? wb.totals.get(id).total : 0;
+        if (!wb.totals.has(id)) wb.totals.set(id, { id, name: m.name, number: m.number, color: m.color, total });
+        return { id, name: m.name, number: m.number, color: m.color, stars: got.stars, votes: got.votes, total };
       }).sort((a, b) => b.total - a.total || a.number - b.number);
+      if (!wb.roundResults.length && !this.nextRoundRappers().length) return this.endGame();
       this.phase = 'standings';
       // Between rounds the scoreboard waits for the rappers (up to NEXT_ROUND_SECONDS); after the last it's brief.
       wb.nextReady = new Set();
@@ -661,8 +680,8 @@
     writeBarsTick(now) {
       const wb = this.wb;
       if (this.phase === 'write' && now >= wb.writeEndsAt + WRITE_GRACE_MS) this.beginBattle();
-      else if (this.phase === 'turn' && now >= this.turn.endAt + WB_GAP_MS) this.beginPerformance(wb.perf + 1);
-      else if (this.phase === 'vote' && now >= this.voteEndsAt) this.closeRoundVote();
+      else if (this.phase === 'turn' && now >= this.turn.endAt + WB_GAP_MS) this.openPerfVote();
+      else if (this.phase === 'vote' && now >= this.voteEndsAt) this.closePerfVote();
       else if (this.phase === 'standings' && now >= wb.standingsEndsAt) {
         if (wb.round >= wb.rounds) this.endGame();
         else this.startNextRound();
@@ -677,7 +696,8 @@
       } else if (this.phase === 'turn' && this.turn && this.turn.rapperId === id) {
         this.beginPerformance(this.wb.perf + 1);
       } else if (this.phase === 'vote') {
-        if (this.writeBarsVoters().every((v) => this.hasRatedAll(v))) this.closeRoundVote();
+        // The performer left, or everyone left has voted: on with the show.
+        if (!this.wb.performers.some((p) => this.members.has(p)) || this.writeBarsVoters().every((v) => this.hasRatedAll(v))) this.closePerfVote();
         else this.broadcast('votes', this.serializeVotes());
       } else if (this.phase === 'standings' && this.wb.round < this.wb.rounds) {
         const left = this.nextRoundRappers();

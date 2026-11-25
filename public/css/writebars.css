@@ -52,7 +52,10 @@
 .wb-line {
   font-family: var(--street); font-size: clamp(18px, 2.8vw, 30px); line-height: 1.12; color: #8b867d;
   opacity: 0; transform: translateY(18px); transition: opacity 0.3s ease, transform 0.35s cubic-bezier(.25, 1, .4, 1), font-size 0.25s, color 0.25s;
-  overflow-wrap: anywhere; text-shadow: 0 3px 0 #000;
+  overflow-wrap: break-word; text-shadow: 0 3px 0 #000;
+  /* The width grows and shrinks with the font size (--wrap is the box width in "current line" ems, set by
+     client.js), so a line keeps exactly the same line breaks as it shrinks from current to shown. */
+  width: calc(var(--wrap, 20) * 1em); align-self: center;
 }
 .wb-line.shown { opacity: 0.5; transform: none; }
 .wb-line.current { opacity: 1; color: var(--ink); font-size: clamp(26px, 4.8vw, 54px); }
