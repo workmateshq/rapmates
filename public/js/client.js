@@ -1198,9 +1198,8 @@
       const card = document.createElement('div');
       card.className = 'wb-entry';
       card.style.setProperty('--pc', x.color);
-      card.innerHTML = `<div class="wb-entry-head"><span class="wb-entry-name">${esc(mine ? `${x.name} (You)` : x.name)}</span>`
-        + `<span class="wb-entry-tag">${x.voice === 'self' ? 'Rapped live' : 'Robot MC'}</span></div>`
-        + `<ol>${x.lines.map((l) => `<li>${markRhymes(l, words)}</li>`).join('')}</ol>`;
+      // Just the bars, centred like they were on stage (the title already says whose they are).
+      card.innerHTML = `<div class="wb-entry-lines">${x.lines.map((l) => `<p>${markRhymes(l, words)}</p>`).join('')}</div>`;
       if (!mine) {
         const stars = document.createElement('div');
         stars.className = 'stars';
