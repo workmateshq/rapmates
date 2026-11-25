@@ -72,15 +72,16 @@
 #vote-overlay.wb { overflow-y: auto; padding-bottom: 30px; }
 #vote-overlay.wb .card { max-width: 640px; }
 .wb-vote-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; text-align: left; }
-.wb-entry { border: 1px solid var(--line); border-left: 4px solid var(--pc); border-radius: 8px; padding: 10px 12px; background: #111; }
+.wb-entry { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; background: #111; }
 .wb-entry-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
 .wb-entry-name { font-family: var(--street); font-size: 22px; line-height: 1.05; color: var(--pc); }
 .wb-entry-tag { font-size: 11px; letter-spacing: 0.2px; color: var(--muted); white-space: nowrap; }
-.wb-entry ol { margin: 6px 0 0 20px; color: var(--ink); font-size: 15px; line-height: 1.35; }
+.wb-entry ol { margin: 6px 0 0 20px; color: var(--ink); font-size: 17px; line-height: 1.4; }
 .wb-entry ol li::marker { color: #6b6862; }
 .wb-entry mark { background: none; color: var(--gold); }
 .wb-entry .wb-empty { color: #5c5a56; }
-.wb-entry .stars { justify-content: flex-start; margin: 6px 0 0; gap: 2px; }
+.wb-entry .wb-your-vote { margin: 14px 0 0; text-align: center; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; color: var(--muted); }
+.wb-entry .stars { justify-content: center; margin: 4px 0 0; gap: 4px; }
 .wb-entry .star { width: 44px; height: 44px; }
 .standings { margin: 14px 0 4px; display: flex; flex-direction: column; gap: 6px; }
 .standing { display: grid; grid-template-columns: 30px 1fr auto auto; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 8px; background: #111; border: 1px solid var(--line); border-left: 4px solid var(--pc); text-align: left; animation: pop-in 0.35s ease-out backwards; }

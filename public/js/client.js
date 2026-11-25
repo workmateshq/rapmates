@@ -1224,7 +1224,10 @@
           return b;
         }));
         paintStars(stars, state.wbStars[x.id] || 0, false);
-        card.append(stars);
+        const label = document.createElement('p');
+        label.className = 'wb-your-vote';
+        label.textContent = 'YOUR VOTE';
+        card.append(label, stars);
       }
       return card;
     }));
