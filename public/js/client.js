@@ -870,7 +870,7 @@
       let score = '';
       if (state.game.mode === 'writebars') {
         const t = (state.game.totals || []).find((x) => x.id === p.id);
-        if (t) score = `${t.total}★`;
+        if (t) score = `${fmtStars(t.total)}★`;
       } else {
         const r = state.game.results.find((x) => x.id === p.id);
         score = r ? (r.average === null ? '–' : `${r.average.toFixed(1)}★`) : '';
@@ -890,7 +890,15 @@
 
   // ---------- Voting ----------
 
+  // Tapping the left half of a star gives a half star (each star has an invisible left and right tap zone, so the
+  // page zoom can't throw the maths off; keyboard presses give the whole star).
+  const starValue = (b, e) => {
+    const n = Number(b.dataset.n);
+    return e && e.target && e.target.closest && e.target.closest('.star-hit.l') ? n - 0.5 : n;
+  };
+  const fmtStars = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
   const STAR_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2l2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.3l-6 3.3 1.3-6.7-5-4.7 6.8-.8z" fill="currentColor" stroke="rgba(0,0,0,.12)" stroke-width="1" stroke-linejoin="round"/></svg>';
+  const STAR_HTML = `<span class="star-base">${STAR_SVG}</span><span class="star-fill">${STAR_SVG}</span><i class="star-hit l"></i><i class="star-hit r"></i>`;
   $('stars').replaceChildren(...[1, 2, 3, 4, 5].map((n) => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -898,20 +906,14 @@
     b.dataset.n = n;
     b.setAttribute('role', 'radio');
     b.setAttribute('aria-label', `${n} star${n > 1 ? 's' : ''}`);
-    b.innerHTML = STAR_SVG;
-    b.addEventListener('click', () => pickStars(n));
+    b.innerHTML = STAR_HTML;
+    b.addEventListener('click', (e) => pickStars(starValue(b, e)));
     return b;
   }));
   function pickStars(n) {
     if (state.voted) return;
     state.myVote = n;
-    document.querySelectorAll('.star').forEach((s) => {
-      const on = Number(s.dataset.n) <= n;
-      s.classList.toggle('on', on);
-      s.classList.remove('pop');
-      if (on) { void s.offsetWidth; s.classList.add('pop'); }
-      s.setAttribute('aria-checked', String(Number(s.dataset.n) === n));
-    });
+    paintStars($('stars'), n, true);
     $('vote-btn').disabled = false;
     playSfx('star', n);
   }
@@ -1190,8 +1192,8 @@
     $('vote-stars-wrap').style.display = 'none';
     $('wb-vote').hidden = false;
     const perf = p.performances[0];
-    $('vote-title').textContent = perf ? (perf.id === state.playerId ? 'How did you go?' : `Rate ${perf.name}'s bars`) : 'Rate the bars';
-    $('vote-title').style.color = '';
+    $('vote-title').textContent = perf ? (perf.id === state.playerId ? `${perf.name} (You)` : perf.name) : '';
+    $('vote-title').style.color = perf ? perf.color : '';
     $('wb-vote-list').replaceChildren(...p.performances.map((x) => {
       const mine = x.id === state.playerId;
       const words = x.pairs.flat();
@@ -1212,12 +1214,13 @@
           b.dataset.n = n;
           b.setAttribute('role', 'radio');
           b.setAttribute('aria-label', `${n} star${n > 1 ? 's' : ''}`);
-          b.innerHTML = STAR_SVG;
-          b.addEventListener('click', () => {
+          b.innerHTML = STAR_HTML;
+          b.addEventListener('click', (e) => {
             if (state.voted) return;
-            state.wbStars[x.id] = n;
-            paintStars(stars, n, true);
-            playSfx('star', n);
+            const v = starValue(b, e);
+            state.wbStars[x.id] = v;
+            paintStars(stars, v, true);
+            playSfx('star', v);
             renderWbVoteState();
           });
           return b;
@@ -1235,13 +1238,17 @@
     renderVoteCount();
     $('vote-overlay').classList.add('show');
   }
+  // n can be a half (3.5: three full stars and half of the fourth).
   function paintStars(group, n, pop) {
     group.querySelectorAll('.star').forEach((s) => {
-      const on = Number(s.dataset.n) <= n;
+      const k = Number(s.dataset.n);
+      const on = k <= n;
+      const half = !on && k - 0.5 === n;
       s.classList.toggle('on', on);
+      s.classList.toggle('half', half);
       s.classList.remove('pop');
-      if (on && pop) { void s.offsetWidth; s.classList.add('pop'); }
-      s.setAttribute('aria-checked', String(Number(s.dataset.n) === n));
+      if ((on || half) && pop) { void s.offsetWidth; s.classList.add('pop'); }
+      s.setAttribute('aria-checked', String(k === Math.ceil(n)));
     });
   }
   function renderWbVoteState() {
@@ -1270,7 +1277,7 @@
     $('standings-title').textContent = last ? 'Final scores' : 'Scoreboard';
     $('standings-table').innerHTML = p.roundResults.map((r, i) => `<div class="standing" style="--pc:${r.color};animation-delay:${0.08 * i}s">`
       + `<span class="pl">${i + 1}</span><span class="nm">${esc(r.id === state.playerId ? `${r.name} (You)` : r.name)}</span>`
-      + `<span class="gain">+${r.stars} ★</span><span class="tot">${r.total} ★</span></div>`).join('')
+      + `<span class="gain">+${fmtStars(r.stars)} ★</span><span class="tot">${fmtStars(r.total)} ★</span></div>`).join('')
       || '<p class="hint">Nobody performed this round.</p>';
     $('standings-next').textContent = last ? 'And the winner is...' : `Round ${p.wbRound + 1} is next: fresh rhymes, the clock starts again.`;
     renderNextRound(p);
@@ -1468,7 +1475,7 @@
       step.innerHTML = `<span class="avatar">${avatarImg(r.name, r.place === 1 ? 'hello' : '')}</span>`
         + `<span class="who">${esc(nameOf(r))}</span>`
         + `<div class="block" style="height:${HEIGHTS[r.place] || 60}px"><span class="place">${r.place}</span>`
-        + `<span class="avg">${wb ? `${r.total} ★` : r.average === null ? 'no votes' : `${r.average.toFixed(1)} ★`}</span></div>`;
+        + `<span class="avg">${wb ? `${fmtStars(r.total)} ★` : r.average === null ? 'no votes' : `${r.average.toFixed(1)} ★`}</span></div>`;
       return step;
     }));
     updateResultsButtons();

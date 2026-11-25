@@ -179,9 +179,9 @@ test('voting: the rapper cannot vote for themselves; rappers and the crowd can',
   finishRap(ctx);
   assert.equal(room.phase, 'vote');
   assert.equal(room.input('p1', { type: 'vote', stars: 5, turn: 0 }), false, 'rapper on themselves');
-  assert.equal(room.input('p2', { type: 'vote', stars: 0, turn: 0 }), false, 'stars are 1-5');
+  assert.equal(room.input('p2', { type: 'vote', stars: 0, turn: 0 }), false, 'stars are 0.5-5');
   assert.equal(room.input('p2', { type: 'vote', stars: 6, turn: 0 }), false);
-  assert.equal(room.input('p2', { type: 'vote', stars: 2.5, turn: 0 }), false);
+  assert.equal(room.input('p2', { type: 'vote', stars: 2.25, turn: 0 }), false, 'half steps only');
   assert.equal(room.input('p2', { type: 'vote', stars: 4, turn: 3 }), false, 'a vote for another turn');
   assert.equal(room.input('ghost', { type: 'vote', stars: 4, turn: 0 }), false);
   assert.ok(room.input('p2', { type: 'vote', stars: 4, turn: 0 }));

@@ -401,3 +401,17 @@ test('between rounds: if the only rapper not ready leaves, the next round starts
   room.leave('p2');
   assert.equal(room.phase, 'write');
 });
+
+test('half stars: ratings from 0.5 to 5 in half steps; totals keep the halves', () => {
+  const ctx = writeBarsRoom(2);
+  const { room } = ctx;
+  allDone(ctx, ['p1', 'p2']);
+  endPerformance(ctx);
+  assert.equal(room.input('p2', { type: 'votes', stars: { p1: 0 }, round: 1 }), false, 'not zero');
+  assert.equal(room.input('p2', { type: 'votes', stars: { p1: 3.25 }, round: 1 }), false, 'halves only');
+  assert.equal(room.input('p2', { type: 'votes', stars: { p1: 5.5 }, round: 1 }), false, 'five at most');
+  assert.ok(room.input('p2', { type: 'votes', stars: { p1: 3.5 }, round: 1 }));
+  endPerformance(ctx);
+  assert.ok(room.input('p1', { type: 'votes', stars: { p2: 0.5 }, round: 1 }));
+  assert.deepEqual(room.wb.roundResults.map((r) => [r.id, r.stars, r.total]), [['p1', 3.5, 3.5], ['p2', 0.5, 0.5]]);
+});

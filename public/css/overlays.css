@@ -18,10 +18,19 @@
   width: 64px; height: 64px; padding: 4px; border: none; background: none; cursor: pointer; color: #343230;
   transition: transform 0.15s, color 0.15s;
 }
-.star svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.6)); }
-.star.on { color: var(--gold); }
+.star { position: relative; }
+.star svg { width: 100%; height: 100%; display: block; }
+.star-base, .star-fill { position: absolute; inset: 4px; display: block; }
+.star-base { filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.6)); }
+/* The gold layer shows nothing, the left half (a half star) or all of it. */
+.star-fill { color: var(--gold); clip-path: inset(0 100% 0 0); transition: clip-path 0.12s; }
+.star.on .star-fill { clip-path: inset(0 0 0 0); }
+.star.half .star-fill { clip-path: inset(0 50% 0 0); }
+.star-hit { position: absolute; top: 0; bottom: 0; width: 50%; z-index: 1; }
+.star-hit.l { left: 0; }
+.star-hit.r { right: 0; }
 .star:hover { transform: scale(1.1); }
-.star.on.pop { animation: star-pop 0.25s ease-out; }
+.star.on.pop, .star.half.pop { animation: star-pop 0.25s ease-out; }
 @keyframes star-pop { from { transform: scale(1.3); } to { transform: scale(1); } }
 .star:focus-visible { outline: 2px solid var(--gold); border-radius: 8px; }
 @media (max-width: 480px) { .star { width: 52px; height: 52px; } }

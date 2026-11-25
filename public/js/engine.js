@@ -63,6 +63,8 @@
 
   const randInt = (n, random = Math.random) => Math.floor(random() * n);
   const round2 = (x) => Math.round(x * 100) / 100;
+  // A rating: 0.5 to 5 stars in half-star steps.
+  const validStars = (n) => typeof n === 'number' && Number.isInteger(n * 2) && n >= 0.5 && n <= 5;
 
   function generateRoomCode(isTaken = () => false) {
     for (let attempt = 0; attempt < 1000; attempt++) {
@@ -314,7 +316,7 @@
       if (this.mode !== 'freestyle' || this.phase !== 'vote' || !this.members.has(id) || !this.turn) return false;
       if (turnIndex !== undefined && turnIndex !== this.turnIndex) return false;
       if (id === this.turn.rapperId) return false;
-      if (!Number.isInteger(stars) || stars < 1 || stars > 5) return false;
+      if (!validStars(stars)) return false;
       this.votes.set(id, stars);
       if (this.allVoted()) this.closeVote();
       else this.broadcast('votes', this.serializeVotes());
@@ -605,7 +607,7 @@
       const ratings = {};
       this.rateableBy(id).forEach((p) => {
         const n = stars[p];
-        if (Number.isInteger(n) && n >= 1 && n <= 5) ratings[p] = n;
+        if (validStars(n)) ratings[p] = n;
       });
       if (!Object.keys(ratings).length) return false;
       wb.votes.set(id, { ...(wb.votes.get(id) || {}), ...ratings });
