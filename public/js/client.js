@@ -2163,8 +2163,7 @@
         d.classList.toggle('down', beatIdx !== null && j === 0);
       });
     }
-    const introBar = Math.floor((p + stage.introBeats) / BPB) + 1;
-    $('bar-count').innerHTML = p < 0 ? `Intro <b>${Math.max(1, introBar)}</b> / ${stage.track.introBars}` : p < stage.rapBeats ? `Line <b>${line + 1}</b> / ${WB_LINES}` : `<b>${WB_LINES}</b> / ${WB_LINES}`;
+    $('bar-count').innerHTML = p < 0 ? '' : p < stage.rapBeats ? `Line <b>${line + 1}</b> / ${WB_LINES}` : `<b>${WB_LINES}</b> / ${WB_LINES}`;
   }
 
   function freestyleFrame(p, now) {
@@ -2185,8 +2184,7 @@
     }
     stage.lastBeat = beatIdx;
 
-    const introBar = Math.floor((p + stage.introBeats) / BPB) + 1;
-    $('bar-count').innerHTML = p < 0 ? `Intro <b>${Math.max(1, introBar)}</b> / ${stage.track.introBars}` : p < TOTAL_BEATS ? `Bar <b>${bar + 1}</b> / ${BARS}` : `<b>${BARS}</b> / ${BARS}`;
+    $('bar-count').innerHTML = p < 0 ? '' : p < TOTAL_BEATS ? `Bar <b>${bar + 1}</b> / ${BARS}` : `<b>${BARS}</b> / ${BARS}`;
     drawBall(p, now);
   }
 
