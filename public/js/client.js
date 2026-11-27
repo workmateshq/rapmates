@@ -1753,8 +1753,10 @@
     },
   };
   const ACCENT_LANG = { GB: /^en[-_]GB/i, US: /^en[-_]US/i };
-  const MALE_HINT = /\b(male|daniel|alex|aaron|arthur|fred|rishi|guy|david|mark|george|james|tom|oliver|lee|reed|ralph|gordon|eddy|rocko)\b/i;
-  const FEMALE_HINT = /\b(female|samantha|karen|victoria|moira|tessa|aria|jenny|zira|susan|hazel|serena|fiona|kate|allison|ava|nicky|catherine|martha|libby|sonia|shelley|flo|sandy|google us english)\b/i;
+  const MALE_HINT = /\b(male|daniel|alex|aaron|arthur|fred|rishi|guy|david|mark|george|james|tom|oliver|lee|reed|ralph|gordon|eddy|rocko|ryan|thomas|christopher|eric|roger|steffan|andrew|brian|elliot|alfie|ethan|noah|william|jamie|evan|nathan|ollie)\b/i;
+  const FEMALE_HINT = /\b(female|samantha|karen|victoria|moira|tessa|aria|jenny|zira|susan|hazel|serena|fiona|kate|allison|ava|nicky|catherine|martha|libby|sonia|shelley|flo|sandy|google us english|maisie|emma|michelle|ana|bella|abbi|olivia|natasha|clara|zoe|stephanie|joanna|kendra|kimberly|salli|amy|emily)\b/i;
+  // The best-sounding voices: Edge's neural "Online (Natural)" voices and Apple's downloadable Premium / Enhanced ones.
+  const HQ = /\b(natural|neural|premium|enhanced)\b/i;
   // macOS novelty voices: fun, but not for reading bars.
   const NOVELTY = /\b(albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|hysterical|grandma|grandpa|junior)\b/i;
   let voices = [];
@@ -1779,6 +1781,9 @@
     };
     // The accent first (by name, then any voice in that accent that isn't the other gender), then any accent.
     const order = ACCENT_LANG[accent] ? [accent, ...Object.keys(ACCENT_LANG).filter((a) => a !== accent)] : Object.keys(ACCENT_LANG);
+    // A high-quality voice of the right gender in the right accent beats everything else.
+    const hq = en.find((v) => HQ.test(v.name) && wants.test(v.name) && !avoid.test(v.name) && ACCENT_LANG[order[0]].test(v.lang));
+    if (hq) return hq;
     for (const a of order) {
       const local = en.filter((v) => ACCENT_LANG[a].test(v.lang));
       const v = byName(local, VOICE_PREFS[a][gender] || []) || local.find((x) => wants.test(x.name) && !avoid.test(x.name))
